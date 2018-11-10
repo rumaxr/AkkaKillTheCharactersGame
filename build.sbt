@@ -1,19 +1,11 @@
-import AssemblyKeys._
-
-// sbt-assembly
-assemblySettings
-
 name := "AkkaKillTheCharactersGame"
 
 version := "1.0"
 
-scalaVersion := "2.10.0"
-
-resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+scalaVersion := "2.12.7"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.1.1", 
-  "org.scala-lang" % "scala-swing" % "2.10+",
-  "commons-cli" % "commons-cli" % "1.2"
+  "com.typesafe.akka" %% "akka-actor" % "2.5.18",
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.18" % Test,
+  "commons-cli" % "commons-cli" % "1.4"
 )
-

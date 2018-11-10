@@ -38,9 +38,4 @@ package object bubbles {
 
   // actor messages
   case object GameOver
-
 }
-
-
-
-

@@ -1,10 +1,9 @@
 package com.alvinalexander.bubbles
 
-import akka.actor.Actor
 import java.awt._
-import javax.swing.JPanel
-import javax.swing.SwingUtilities
-import java.awt.image.BufferedImage
+
+import akka.actor.Actor
+import javax.swing.{JPanel, SwingUtilities}
 
 /**
  * This is the JPanel that all of the bubbles are drawn on.
@@ -37,16 +36,14 @@ case class Redraw(bubble: Bubble)
 
 class BubblePanelActor(bubblePanel: BubblePanel) extends Actor {
 
-  def receive = {
+  def receive: Receive = {
     case Redraw(bubble) => doRedraw(bubble) 
     case _ =>
   }
 
-  private def doRedraw(bubble: Bubble) {
-    SwingUtilities.invokeLater(new Runnable {
-      def run {
-        bubblePanel.doRedraw(bubble)
-      }
+  private def doRedraw(bubble: Bubble): Unit = {
+    SwingUtilities.invokeLater(() => {
+      bubblePanel.doRedraw(bubble)
     })
   }
 

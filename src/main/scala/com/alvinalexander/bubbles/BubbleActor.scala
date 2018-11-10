@@ -1,8 +1,8 @@
 package com.alvinalexander.bubbles
 
-import akka.actor._
 import java.awt.Color
-import javax.swing.SwingUtilities
+
+import akka.actor._
 
 case object Tick
 case object StopMoving
@@ -36,42 +36,38 @@ class BubbleActor(
   
   private val bubble = Bubble(x, y, lastX, lastY, diameter, fgColor, bgColor, char)
   
-  def receive = {
-    case Tick => handleTick
+  def receive: Receive = {
+    case Tick => handleTick()
     case StopMoving => stopped = true 
     case _ =>
   }
   
-  def handleTick {
+  def handleTick(): Unit = {
     if (! stopped) {
-      recalculatePosition
+      recalculatePosition()
     }
-    updateBubblePanel
+    updateBubblePanel()
   }
   
-  // removed 'x' calcs because only y-values change
-  def recalculatePosition {
+  // removed 'x' calculations because only y-values change
+  def recalculatePosition(): Unit = {
     lastY = y
     y = y + deltaY
     if (y <= 0) {
       y = 0
-      val actorManager = context.actorFor(Seq("..", ACTOR_MANAGER_NAME))
-      actorManager ! GameOver
+      context.parent ! GameOver
     } else {
       bubble.y = y
       bubble.lastY = lastY
     } 
   }
 
-  override def postStop { 
-    updateBubblePanel
+  override def postStop(): Unit = {
+    updateBubblePanel()
     println(s"OMG, they killed me (${this.name})") 
   }
 
-  def updateBubblePanel {
+  def updateBubblePanel(): Unit = {
     bubblePanelActor ! Redraw(bubble)
   }
-
 }
-
-

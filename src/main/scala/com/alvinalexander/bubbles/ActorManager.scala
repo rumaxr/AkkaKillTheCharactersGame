@@ -1,7 +1,6 @@
 package com.alvinalexander.bubbles
 
-import akka.actor.Actor
-import akka.actor.ActorRef
+import akka.actor.{Actor, ActorRef}
 
 case class KillActor(actorRef: ActorRef)
 case class SetInitialNumActors(num: Int)
@@ -15,46 +14,40 @@ case class SetInitialNumActors(num: Int)
  */
 class ActorManager(bubbles: Array[ActorRef]) extends Actor {
   
-  private var activeActorCount = bubbles.size
+  private var activeActorCount = bubbles.length
 
-  def receive = {
+  def receive: Receive = {
     case KillActor(actorRef) => doKillActorAction(actorRef)
-    case GameOver => doGameOverAction
+    case GameOver => doGameOverAction()
     case _ =>
   }
   
-  def doKillActorAction(actorRef: ActorRef) {
+  def doKillActorAction(actorRef: ActorRef): Unit = {
     context.stop(actorRef)
     activeActorCount -= 1
     if (activeActorCount == 0) {
-      val mainFrameActor = getMainFrameActor
-      mainFrameActor ! ShowYouWinWindow
-      shutdownApplication
+      context.parent ! ShowYouWinWindow
+      shutdownApplication()
     }
   }
   
-  def doGameOverAction {
-    stopAllBubbles
-    val mainFrameActor = getMainFrameActor
-    mainFrameActor ! ShowGameOverWindow
+  def doGameOverAction(): Unit = {
+    stopAllBubbles()
+    context.parent ! ShowGameOverWindow
     // TODO don't shut the app down until the 'Game Over' overlay is shown
     //shutdownApplication
   }
   
   // use StopMoving so the panel redraws properly at the end (vs. context.stop) 
-  def stopAllBubbles {
+  def stopAllBubbles(): Unit = {
     for (b <- bubbles) {
       b ! StopMoving
     }
   }
-  
-  def getMainFrameActor = context.actorFor(Seq("..", MAIN_FRAME_ACTOR_NAME))
 
-  def shutdownApplication {
-    context.system.shutdown
+  def shutdownApplication(): Unit =  {
+    context.system.stop(context.parent)
     Thread.sleep(3000)
     System.exit(0)
   }
-
 }
-

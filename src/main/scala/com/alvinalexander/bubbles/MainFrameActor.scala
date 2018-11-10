@@ -1,14 +1,10 @@
 package com.alvinalexander.bubbles
 
-import akka.actor.Actor
-import javax.swing.{JFrame, JPanel, JLabel, SwingUtilities}
-import java.awt.{BorderLayout, Dimension, Color}
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.Font
-import java.awt.event.KeyListener
-import java.awt.event.KeyEvent
-import akka.actor.ActorRef
+import java.awt._
+import java.awt.event.{KeyEvent, KeyListener}
+
+import akka.actor.{Actor, ActorRef, Props, Terminated}
+import javax.swing.{JFrame, JPanel, SwingUtilities}
 
 case object DisplayMainFrame
 case object ShowGameOverWindow
@@ -20,18 +16,19 @@ case object ShowYouWinWindow
  */
 class MainFrameActor(bubblePanel: BubblePanel) extends Actor {
 
-  private var playSoundActor: ActorRef = null
-  private var actorManager: ActorRef = null
+  private var playSoundActor: ActorRef = _
+  private var actorManager: ActorRef = _
   
-  def receive = {
-    case DisplayMainFrame => showMainFrame
-    case ShowGameOverWindow => showGameOverWindow
-    case ShowYouWinWindow => showYouWinWindow
+  def receive: Receive = {
+    case DisplayMainFrame => showMainFrame()
+    case ShowGameOverWindow => showGameOverWindow()
+    case ShowYouWinWindow => showYouWinWindow()
+    case Terminated(_) => getPlaySoundActor ! PlayFailureSound
     case _ =>
   }
   
-  val myKeyListener = new KeyListener {
-    override def keyPressed(e: KeyEvent) 
+  val myKeyListener: KeyListener = new KeyListener {
+    override def keyPressed(e: KeyEvent): Unit =
     {
       if (e.getKeyCode == KeyEvent.VK_ESCAPE) {
         // TODO quit the app
@@ -41,19 +38,19 @@ class MainFrameActor(bubblePanel: BubblePanel) extends Actor {
       }
     }
 
-    override def keyReleased(e: KeyEvent) {} 
-    override def keyTyped(e: KeyEvent) {}
+    override def keyReleased(e: KeyEvent): Unit = {}
+    override def keyTyped(e: KeyEvent): Unit = {}
   }
 
-  val mainFrame = new JFrame {
+  val mainFrame: JFrame = new JFrame {
     setMinimumSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT))
     setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT))
     addKeyListener(myKeyListener)
   }
 
-  configureMainFrame
+  configureMainFrame()
   
-  def configureMainFrame {
+  def configureMainFrame(): Unit = {
     mainFrame.setTitle(APPLICATION_NAME)
     mainFrame.setBackground(Color.BLACK)
     mainFrame.getContentPane.add(bubblePanel)
@@ -62,55 +59,43 @@ class MainFrameActor(bubblePanel: BubblePanel) extends Actor {
     mainFrame.getRootPane.putClientProperty("Window.alpha", 0.9f)
   }
   
-  def lookupCharacterActor(c: Char) = context.actorFor(Seq("..", c.toString))
+  def lookupCharacterActor(c: Char): ActorRef = context.actorOf(Props(), c.toString)
 
-  def getPlaySoundActor = {
-    if (playSoundActor == null) playSoundActor = context.actorFor(Seq("..", PLAY_SOUND_ACTOR_NAME))
+  def getPlaySoundActor: ActorRef = {
+    if (playSoundActor == null) playSoundActor = context.actorOf(Props(), PLAY_SOUND_ACTOR_NAME)
     playSoundActor
   } 
   
-  def getActorManager = {
-    if (actorManager == null) actorManager = context.actorFor(Seq("..", ACTOR_MANAGER_NAME))
+  def getActorManager: ActorRef = {
+    if (actorManager == null) actorManager = context.actorOf(Props(), ACTOR_MANAGER_NAME)
     actorManager
   } 
   
-  def attemptToKillCharacterActor(c: Char) {
+  def attemptToKillCharacterActor(c: Char): Unit = {
     val characterActor = lookupCharacterActor(c)
-    if (characterActor.isTerminated) {
-      // character-actor does not exist
-      getPlaySoundActor ! PlayFailureSound
-    } else {
-      // character-actor exists
-      getPlaySoundActor ! PlaySuccessSound
-      getActorManager ! KillActor(characterActor)
-    }
+
+    context.watch(characterActor)
   }
 
-  def showGameOverWindow {
-    SwingUtilities.invokeLater(new Runnable {
-      def run {
-        mainFrame.removeKeyListener(myKeyListener)
-        mainFrame.setGlassPane(new OverlayPanel(240, 320, "GAME OVER", new Font("Sans Serif", Font.BOLD, 60), Color.RED))
-        mainFrame.getGlassPane.setVisible(true)
-      }
+  def showGameOverWindow(): Unit = {
+    SwingUtilities.invokeLater(() => {
+      mainFrame.removeKeyListener(myKeyListener)
+      mainFrame.setGlassPane(new OverlayPanel(240, 320, "GAME OVER", new Font("Sans Serif", Font.BOLD, 60), Color.RED))
+      mainFrame.getGlassPane.setVisible(true)
     })
   }
   
-  def showYouWinWindow {
-    SwingUtilities.invokeLater(new Runnable {
-      def run {
-        mainFrame.removeKeyListener(myKeyListener)
-        mainFrame.setGlassPane(new OverlayPanel(240, 320, "YOU WIN!", new Font("Sans Serif", Font.BOLD, 60), Color.GREEN))
-        mainFrame.getGlassPane.setVisible(true)
-      }
+  def showYouWinWindow(): Unit = {
+    SwingUtilities.invokeLater(() => {
+      mainFrame.removeKeyListener(myKeyListener)
+      mainFrame.setGlassPane(new OverlayPanel(240, 320, "YOU WIN!", new Font("Sans Serif", Font.BOLD, 60), Color.GREEN))
+      mainFrame.getGlassPane.setVisible(true)
     })
   }
 
-  def showMainFrame {
-    SwingUtilities.invokeLater(new Runnable {
-      def run {
-        mainFrame.setVisible(true)
-      }
+  def showMainFrame(): Unit = {
+    SwingUtilities.invokeLater(() => {
+      mainFrame.setVisible(true)
     })
   }
 }
@@ -126,14 +111,10 @@ class OverlayPanel(
     fontColor: Color) extends JPanel {
 
   setOpaque(false)
-  override def paintComponent(g: Graphics) {
+  override def paintComponent(g: Graphics): Unit = {
     val g2 = g.asInstanceOf[Graphics2D]
     g2.setFont(font)
     g2.setColor(fontColor)
     g2.drawString(message, x, y)
   }
-  
 }
-
-
-
